@@ -307,7 +307,7 @@ void Simulation::PMIUpdate(const VectorX &Xi) {
 	}
 
 
-
+	/*
 	// solve V = inv(A)*B using Eigen 
 	MatrixX hessian(g_mesh->sys_dim, g_mesh->sys_dim);
 	Eigen::SimplicialLDLT<MatrixX, Eigen::Upper> ldlt_solver;
@@ -319,10 +319,11 @@ void Simulation::PMIUpdate(const VectorX &Xi) {
 	VectorX Vel_next = g_mesh->M_inv*g_dt*(F + g_mesh->M / g_dt * g_mesh->Vel);
 	// x_{k+1}
 	VectorX X_updated = g_mesh->X + (g_mesh->Vel + Vel_next) / 2.0 * g_dt;
-
+	
 	// update states here
 	g_mesh->X = X_updated;
 	g_mesh->Vel = Vel_next;
+	*/
 }
 /***************************
 5) IEI
