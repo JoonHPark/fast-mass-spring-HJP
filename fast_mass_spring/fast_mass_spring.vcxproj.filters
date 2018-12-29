@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\stdafx">
+      <UniqueIdentifier>{cbca3a9a-66ef-46c4-b341-5dd6b65d29f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\simulation">
+      <UniqueIdentifier>{b8282e9c-c93f-4b64-81b4-6980f505062a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\textfile">
+      <UniqueIdentifier>{a7c2a7dc-bc2e-411d-a160-df9b7ebb6dd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mesh">
+      <UniqueIdentifier>{d164e5a8-514d-43f2-add7-255383577890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\simulation\opengl">
+      <UniqueIdentifier>{aa62e94f-e8a3-4d9d-b880-100b6af8153e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\simulation\opengl\classes">
+      <UniqueIdentifier>{57a3b97d-7f43-40eb-a28b-bf1c9437a0b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\simulation\opengl\shader">
+      <UniqueIdentifier>{63876046-c167-4c7c-9d3a-f8428a30e663}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mesh\constraint">
+      <UniqueIdentifier>{6c9a9d29-a0aa-4b61-873d-f1958019a456}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mesh\constraint\spring_fixed">
+      <UniqueIdentifier>{824ceda6-9fc4-4995-92f6-c7647a706b9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mesh\constraint\spring">
+      <UniqueIdentifier>{d182358c-116a-4163-b433-53edbcee0287}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mesh\control">
+      <UniqueIdentifier>{267a3678-a4cb-42de-86c5-c85d60ec7fba}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Header Files\stdafx</Filter>
+    </ClCompile>
+    <ClCompile Include="simulation.cpp">
+      <Filter>Header Files\simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="_opengl_files\opengl_manager.cpp">
+      <Filter>Header Files\simulation\opengl</Filter>
+    </ClCompile>
+    <ClCompile Include="_opengl_files\_classes\light.cpp">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="_opengl_files\_classes\node.cpp">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="_opengl_files\_classes\object.cpp">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="_opengl_files\_classes\cache_manager.cpp">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="textfile.cpp">
+      <Filter>Header Files\textfile</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh.cpp">
+      <Filter>Header Files\mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="spring.cpp">
+      <Filter>Header Files\mesh\constraint\spring</Filter>
+    </ClCompile>
+    <ClCompile Include="spring_fixed.cpp">
+      <Filter>Header Files\mesh\constraint\spring_fixed</Filter>
+    </ClCompile>
+    <ClCompile Include="control.cpp">
+      <Filter>Header Files\mesh\control</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files\stdafx</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files\stdafx</Filter>
+    </ClInclude>
+    <ClInclude Include="_opengl_files\opengl_manager.h">
+      <Filter>Header Files\simulation\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="_opengl_files\_classes\camera.h">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="_opengl_files\_classes\data.h">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="_opengl_files\_classes\light.h">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="_opengl_files\_classes\node.h">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="_opengl_files\_classes\object.h">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="_opengl_files\_classes\cache_manager.h">
+      <Filter>Header Files\simulation\opengl\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="simulation.h">
+      <Filter>Header Files\simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="textfile.h">
+      <Filter>Header Files\textfile</Filter>
+    </ClInclude>
+    <ClInclude Include="mesh.h">
+      <Filter>Header Files\mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="constraint.h">
+      <Filter>Header Files\mesh\constraint</Filter>
+    </ClInclude>
+    <ClInclude Include="spring.h">
+      <Filter>Header Files\mesh\constraint\spring</Filter>
+    </ClInclude>
+    <ClInclude Include="spring_fixed.h">
+      <Filter>Header Files\mesh\constraint\spring_fixed</Filter>
+    </ClInclude>
+    <ClInclude Include="control.h">
+      <Filter>Header Files\mesh\control</Filter>
+    </ClInclude>
+    <ClInclude Include="defines.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="_opengl_files\_shaders\depth_mapping_directional.fs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_mapping_directional.vs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_mapping_point.fs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_mapping_point.gs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_mapping_point.vs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\lamp.fs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\lamp.vs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\object.fs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\object.vs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_debug_directional.fs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_debug_directional.vs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_debug_point.fs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+    <None Include="_opengl_files\_shaders\depth_debug_point.vs">
+      <Filter>Header Files\simulation\opengl\shader</Filter>
+    </None>
+  </ItemGroup>
+</Project>
