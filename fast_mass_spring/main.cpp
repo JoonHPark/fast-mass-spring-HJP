@@ -17,6 +17,7 @@ bool g_reset;
 // integrator type
 Integrator g_integrator;
 
+
 // number of iteartions
 int g_iteration;
 
