@@ -13,5 +13,8 @@ public:
 	virtual void Construct_L(std::vector<Eigen::Triplet<double, int>> &triplets);
 	virtual void Construct_J(std::vector<Eigen::Triplet<double, int>> &triplets);
 	virtual void Construct_DVector(const VectorX &Xi, VectorX &d);
+
+	// PMI
+	virtual void ConstructPMI_Mlhs_F(const double dt, const double mass, const double damping, const VectorX &X, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, VectorX &F);
 };
 

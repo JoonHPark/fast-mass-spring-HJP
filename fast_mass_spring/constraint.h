@@ -20,4 +20,14 @@ struct Constraint {
 	virtual void Construct_L(std::vector<Eigen::Triplet<double, int>> &triplets) { std::cout << "called virtual function." << std::endl; }
 	virtual void Construct_J(std::vector<Eigen::Triplet<double, int>> &triplets) { std::cout << "called virtual function." << std::endl; }
 	virtual void Construct_DVector(const VectorX &Xi, VectorX &d) { std::cout << "called virtual function." << std::endl; }
+
+	// PMI
+	virtual void ConstructPMI_Mlhs_F(const double dt, const double mass, const double damping, const VectorX &X, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, VectorX &F) { std::cout << "called virtual function." << std::endl; }
+	virtual void ConstructPMI_Mrhs(const double dt, const double mass, std::vector<Eigen::Triplet<double, int>> &Mrhs_triplets) { 
+		double mhat = mass * 2.0 / dt;
+		Mrhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 0, end_node1 + 0, mhat));
+		Mrhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 1, end_node1 + 1, mhat));
+		Mrhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 2, end_node1 + 2, mhat));
+		printf("[%d, %d] = %f\n", end_node1, end_node1, mhat);
+	}
 };

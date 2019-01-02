@@ -32,7 +32,7 @@ Simulation::Simulation() : I_3x3(Eigen::Matrix3d::Identity()) {
 	g_gravity_force.resize(g_mesh->sys_dim);
 	g_gravity_force.setZero();
 	for (int i = 0; i < g_mesh->node_count; i++) {
-		g_gravity_force(3 * i + 2) = -MASS * GRAVITY;
+		g_gravity_force(3 * i + 2) = -g_mesh->mass * GRAVITY;
 	}
 
 	// identity matrix (3m x 3m)
@@ -280,7 +280,7 @@ void Simulation::LocalGlobalUpdate(const VectorX &Y, VectorX &X_output) {
 		VectorX b = g_mesh->M * Y + h * h * (J * d + dE);
 
 		// *** update *** //
-		Xi = llt_solver.solve(b);
+		Xi = llt_solver_localglobal.solve(b);
 	} // for ends
 
 	X_output = Xi;
@@ -289,42 +289,75 @@ void Simulation::LocalGlobalUpdate(const VectorX &Y, VectorX &X_output) {
 4) PMI
 ****************************/
 void Simulation::PMIUpdate(const VectorX &Xi) {
-	// *** external force *** //
-	// spring force
+	//auto t0 = std::chrono::high_resolution_clock::now();
+	MatrixX Mlhs(g_mesh->sys_dim, g_mesh->sys_dim);
+	MatrixX Mrhs(g_mesh->sys_dim, g_mesh->sys_dim);
 	VectorX F(g_mesh->sys_dim);
-	g_mesh->ComputeForces(Xi, F);
+	F.setZero();
+
+	// * 4 and * 2 = just count how many .push_back() is called per constraint
+	std::vector<Eigen::Triplet<double, int>> Mlhs_triplets, Mrhs_triplets;
+	Mlhs_triplets.reserve(g_mesh->constraint_count * 12);
+	Mrhs_triplets.reserve(g_mesh->constraint_count * 6);
+
+	// construction occurs here
+	g_mesh->ConstructForPmi(h, Mlhs_triplets, Mrhs_triplets, F);
+	Mlhs.setFromTriplets(Mlhs_triplets.begin(), Mlhs_triplets.end());
+	Mrhs.setFromTriplets(Mrhs_triplets.begin(), Mrhs_triplets.end());
+	//auto t1 = std::chrono::high_resolution_clock::now();
 
 	// gravity
 	F += g_gravity_force;
+	//auto t2 = std::chrono::high_resolution_clock::now();
 
 	// controller
-	if (g_do_control) {
+	if (0) {
 		static const PID pid_gain = PID(pid_P, pid_I, pid_D);
 		Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, g_dt, Xi.segment<3>(g_fixed_index_1));
 		Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, g_dt, Xi.segment<3>(g_fixed_index_2));
 		F.segment<3>(g_fixed_index_1) = f_ctrl_1;
 		F.segment<3>(g_fixed_index_2) = f_ctrl_2;
 	}
+	//auto t3 = std::chrono::high_resolution_clock::now();
 
-
-	/*
-	// solve V = inv(A)*B using Eigen 
-	MatrixX hessian(g_mesh->sys_dim, g_mesh->sys_dim);
+	// ------------------------------- //
+	// solve v_{k+1} = inv(Mlhs)*(Mrhs*Vel + F) using Eigen
+	// factorize inv(Mlhs) part
 	Eigen::SimplicialLDLT<MatrixX, Eigen::Upper> ldlt_solver;
-	FactorizeDirectSolverLDLT(hessian, ldlt_solver);
-	VectorX hessianInv_x_gradient = ldlt_solver.solve(gradient);
+	FactorizeDirectSolverLDLT(Mlhs, ldlt_solver);
 
+	cout << "------------- Mlhs" << endl << Mlhs << endl;
+	cout << "------------- Mrhs" << endl << Mrhs << endl;
+	cout << "------------- dE" << endl << F << endl << endl;
 
+	// construct (Mrhs*Vel + F)
+	VectorX rhs = Mrhs * g_mesh->Vel + F;
+	VectorX Vhat = ldlt_solver.solve(rhs);
+	//auto t5 = std::chrono::high_resolution_clock::now();
+	// ------------------------------- //
 	// v_{k+1}
-	VectorX Vel_next = g_mesh->M_inv*g_dt*(F + g_mesh->M / g_dt * g_mesh->Vel);
+	VectorX Vel_next = 2.0*Vhat - g_mesh->Vel;
+
 	// x_{k+1}
-	VectorX X_updated = g_mesh->X + (g_mesh->Vel + Vel_next) / 2.0 * g_dt;
-	
+	VectorX X_next = g_mesh->X + Vhat * h;
+
 	// update states here
-	g_mesh->X = X_updated;
+	g_mesh->X = X_next;
 	g_mesh->Vel = Vel_next;
+	//auto t8 = std::chrono::high_resolution_clock::now();
+	/*
+	double t01 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+	double t12 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+	double t23 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+	double t34 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
+	double t45 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count();
+	double t56 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count();
+	double t67 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t7 - t6).count();
+	double t78 = 0.000001 * std::chrono::duration_cast<std::chrono::microseconds>(t8 - t7).count();
+	printf("t01=%f, t12=%f, t23=%f, t34=%f, t45=%f, t56=%f, t67=%f, t78=%f\n", t01, t12, t23, t34, t45, t56, t67, t78);
 	*/
 }
+
 /***************************
 5) IEI
 ****************************/
@@ -334,7 +367,7 @@ void Simulation::IeiUpdate(const VectorX &Y, VectorX &X_output) {
 
 // =================================== //
 // factorizations
-void Simulation::FactorizeDirectSolverLDLT(const MatrixX& hessian, Eigen::SimplicialLDLT<MatrixX, Eigen::Upper>& ldlt_solver) {
+void Simulation::FactorizeDirectSolverLDLT(const MatrixX& hessian, Eigen::SimplicialLDLT<MatrixX, Eigen::Upper> &ldlt_solver) {
 	MatrixX hessian_prime = hessian;
 	ldlt_solver.analyzePattern(hessian_prime);
 	ldlt_solver.factorize(hessian_prime);
@@ -345,20 +378,15 @@ void Simulation::FactorizeDirectSolverLDLT(const MatrixX& hessian, Eigen::Simpli
 		ldlt_solver.factorize(hessian_prime);
 	}
 }
-void Simulation::FactorizeDirectSolverLLT(const MatrixX& MhhL) {
+void Simulation::FactorizeDirectSolverLLT(const MatrixX& MhhL, Eigen::SimplicialLLT<MatrixX, Eigen::Upper> &llt_solver) {
 	MatrixX MhhL_prime = MhhL;
 	llt_solver.analyzePattern(MhhL_prime);
 	llt_solver.factorize(MhhL_prime);
-	double Regularization = 0.00001;
-
-	MatrixX I_3m3m;
-	I_3m3m.resize(g_mesh->sys_dim, g_mesh->sys_dim);
-	I_3m3m.setIdentity();
-
+	double regularization = 0.00001;
 	while (llt_solver.info() != Eigen::Success)
 	{
-		Regularization *= 10;
-		MhhL_prime = MhhL_prime + Regularization * I_3m3m;
+		regularization *= 10;
+		MhhL_prime = MhhL_prime + regularization * I_3m3m;
 		llt_solver.factorize(MhhL_prime);
 	}
 }
@@ -366,21 +394,30 @@ void Simulation::PrefactorizeLocalGlobal() {
 	// L: 3m x 3m
 	L.resize(g_mesh->sys_dim, g_mesh->sys_dim);
 	std::vector<Eigen::Triplet<double, int>> triplets_L;
-	triplets_L.resize(12 * g_mesh->constraint_count);
+	triplets_L.reserve(12 * g_mesh->constraint_count);
 	g_mesh->ConstructLTriplets(triplets_L);
 	L.setFromTriplets(triplets_L.begin(), triplets_L.end());
 
 	// J: 3m x 3s
 	J.resize(g_mesh->sys_dim, 3 * g_mesh->constraint_count);
 	std::vector<Eigen::Triplet<double, int>> triplets_J;
-	triplets_J.resize(6 * g_mesh->constraint_count);
+	triplets_J.reserve(6 * g_mesh->constraint_count);
 	g_mesh->ConstructJTriplets(triplets_J);
 	J.setFromTriplets(triplets_J.begin(), triplets_J.end());
 
 	// prefactorize: Cholesky
 	M_hhL = g_mesh->M + h * h * L;
-	FactorizeDirectSolverLLT(M_hhL);
+	FactorizeDirectSolverLLT(M_hhL, llt_solver_localglobal);
 }
+
+
+
+
+
+
+
+
+
 void Simulation::InitControlCommands() {
 	double dx = ROW * REST_LENGTH * 0.25;
 

@@ -6,7 +6,7 @@ using std::endl;
 extern int g_fixed_index_1, g_fixed_index_2;
 extern VectorX g_gravity_force;
 
-Mesh::Mesh() : node_count(ROW*COL), constraint_count((ROW - 1)*COL + (COL - 1)*ROW), sys_dim(3 * node_count), vertices_count((ROW - 1)*(COL - 1) * 6) {
+Mesh::Mesh() : node_count(ROW*COL), constraint_count((ROW - 1)*COL + (COL - 1)*ROW), sys_dim(3 * node_count), vertices_count((ROW - 1)*(COL - 1) * 6), mass(MASS), damping(DAMPING_PHYSICAL) {
 	mutex_disp_data = CreateMutex(NULL, FALSE, NULL);
 	if (mutex_disp_data == NULL) {
 		printf("CreateMutex error, mutex_disp_data: %d\n", GetLastError());
@@ -45,6 +45,7 @@ void Mesh::ComputeHessian(const VectorX &Xi, const double h, MatrixX &hessian_ou
 	MatrixX ddE(sys_dim, sys_dim);
 	ddE.setZero();
 	std::vector<Eigen::Triplet<double, int>> ddE_triplets;
+	ddE_triplets.reserve(constraints.size());
 
 	for (std::vector<Constraint*>::iterator c = constraints.begin(); c != constraints.end(); c++) {
 		(*c)->Construct_ddE(Xi, ddE_triplets);
@@ -65,6 +66,15 @@ void Mesh::ConstructJTriplets(std::vector<Eigen::Triplet<double, int>> &triplets
 	}
 }
 
+// PMI
+void Mesh::ConstructForPmi(const double Tk, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, std::vector<Eigen::Triplet<double, int>> &Mrhs_triplets, VectorX &F) {
+	// loop constraints, construct Mlhs, Mrhs, B
+	for (std::vector<Constraint*>::iterator c = constraints.begin(); c != constraints.end(); c++) {
+		(*c)->ConstructPMI_Mlhs_F(Tk, mass, damping, X, Mlhs_triplets, F);
+		(*c)->ConstructPMI_Mrhs(Tk, mass, Mrhs_triplets);
+	}
+}
+
 void Mesh::ConstructDVector(const VectorX &Xi, VectorX &d) {
 	Spring *spring;
 	Vector3 x1, x2, d12;
@@ -82,14 +92,7 @@ void Mesh::InitInertiaMatrix() {
 	const int size = 3 * node_count;
 	M.resize(size, size);
 	M.setIdentity();
-	M *= MASS;
-}
-void Mesh::InitDampingMatrix() {
-	// diagonal damping matrix for pmi & iei.
-	const int size = 3 * node_count;
-	B.resize(size, size);
-	B.setIdentity();
-	B *= DAMPING_PHYSICAL;
+	M *= mass;
 }
 inline SpringNodeType Mesh::GetNodeType(int r, int c) {
 	if ((r == 0 && c == 0) || (r == ROW - 1 && c == COL - 1) || (r == 0 && c == COL - 1) || (r == ROW - 1 && c == 0)) {
@@ -118,7 +121,7 @@ void Mesh::InitNodesAndSprings() {
 	double y_initial = 0.0;
 
 	// init nodes
-	for (unsigned int r = 0; r < ROW; r++) {
+	for (size_t r = 0; r < ROW; r++) {
 		for (unsigned int c = 0; c < COL; c++) {
 			double x = (r + 1) * length_initial;
 			double y = y_initial;
@@ -178,7 +181,6 @@ void Mesh::InitNodesAndSprings() {
 			}
 		}
 	}
-
 	// constraints
 	SpringFixed *spring_fixed1 = new SpringFixed(idx++, g_fixed_index_1, X_default.segment<3>(g_fixed_index_1), STIFFNESS_CONSTRAINT);
 	SpringFixed *spring_fixed2 = new SpringFixed(idx, g_fixed_index_2, X_default.segment<3>(g_fixed_index_2), STIFFNESS_CONSTRAINT);
@@ -187,9 +189,6 @@ void Mesh::InitNodesAndSprings() {
 
 	// inertia matrix
 	InitInertiaMatrix();
-
-	// damping matrix (pmi & iei)
-	InitDampingMatrix();
 
 	// results
 	constraint_count = constraints.size();

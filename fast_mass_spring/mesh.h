@@ -24,6 +24,9 @@ public:
 	Mesh();
 	~Mesh();
 
+	// inertia and damping per node
+	const double mass, damping;
+
 	// initialization
 	void InitNodesAndSprings();
 
@@ -36,12 +39,14 @@ public:
 	// * local global
 	// construct L matrix
 	void ConstructLTriplets(std::vector<Eigen::Triplet<double, int>> &triplets);
-
 	// construct J matrix
 	void ConstructJTriplets(std::vector<Eigen::Triplet<double, int>> &triplets);
-
 	// d vector
 	void ConstructDVector(const VectorX &Xi, VectorX &d);
+	// ------------------- //
+	// * PMI
+	// lhs M matrix
+	void ConstructForPmi(const double Tk, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, std::vector<Eigen::Triplet<double, int>> &Mrhs_triplets, VectorX &F);
 	// ------------------- //
 
 	// state update (setter)
@@ -71,10 +76,6 @@ private:
 	// inertia matrix
 	MatrixX M;
 	void InitInertiaMatrix();
-
-	// damping matrix (PMI & IEI)
-	MatrixX B;
-	void InitDampingMatrix();
 
 	// graphics
 	std::vector<DisplayData> disp_data;

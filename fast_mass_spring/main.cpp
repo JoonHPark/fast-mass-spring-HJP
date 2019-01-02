@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 	g_integrator = PMI;
 
 	g_fixed_index_1 = 0;
-	g_fixed_index_2 = 3 * COL * (ROW - 1);
+	g_fixed_index_2 = 3 * ROW * (COL - 1);
 
 	// opengl setup
 	g_opengl_manager = new opengl::OpenglManager();

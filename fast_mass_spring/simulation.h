@@ -52,15 +52,15 @@ private:
 	void FactorizeDirectSolverLDLT(const MatrixX& A, Eigen::SimplicialLDLT<MatrixX, Eigen::Upper>& ldlt_solver);
 	// 3) block coordinate descent
 	void LocalGlobalUpdate(const VectorX &Y, VectorX &X_output);
-	void FactorizeDirectSolverLLT(const MatrixX& MhhL);
+	void FactorizeDirectSolverLLT(const MatrixX& MhhL, Eigen::SimplicialLLT<MatrixX, Eigen::Upper> &llt_solver);
 	void PrefactorizeLocalGlobal();
 	MatrixX M_hhL, L, J;
 	bool local_global_first_loop;
-	Eigen::SimplicialLLT<MatrixX, Eigen::Upper> llt_solver;
+	Eigen::SimplicialLLT<MatrixX, Eigen::Upper> llt_solver_localglobal;
 	// =========================== //
 	// NON-ITERATIVE METHODS
 	// 4) pmi
-	void PMIUpdate(const VectorX &X_curr);
+	void PMIUpdate(const VectorX &Xi);
 	// 5) iei
 	void IeiUpdate(const VectorX &Y, VectorX &X_output);
 	// =========================== //

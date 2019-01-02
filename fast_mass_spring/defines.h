@@ -5,17 +5,17 @@
 #define MAX_dT_nano 1.0 / MIN_Hz * 1000000.0
 
 // horizontal (+x) node count 
-#define ROW 21
+#define ROW 2
 
 // vertical (-z) node count
-#define COL 21
+#define COL 2
 
 // default spring length
 #define REST_LENGTH 0.2
 
 #define GRAVITY 100.0
 #define MASS 1.0 / (ROW*COL)
-#define STIFFNESS 100.0
+#define STIFFNESS 10.0
 #define STIFFNESS_CONSTRAINT 10.0 * STIFFNESS
 #define DAMPING_NUMERICAL 0.0
 #define DAMPING_PHYSICAL 0.0

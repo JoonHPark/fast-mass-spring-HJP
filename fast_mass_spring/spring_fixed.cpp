@@ -30,3 +30,16 @@ void SpringFixed::Construct_J(std::vector<Eigen::Triplet<double, int>> &J_triple
 void SpringFixed::Construct_DVector(const VectorX &Xi, VectorX &d) {
 	d.segment<3>(3 * constraint_index) = fixed_point;
 }
+
+
+// PMI
+void SpringFixed::ConstructPMI_Mlhs_F(const double dt, const double mass, const double damping, const VectorX &X, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, VectorX &F) {
+	// Mlhs
+	double mhat = mass * 2.0 / dt + damping + k * dt / 2.0;
+	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 0, end_node1 + 0, mhat));
+	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 1, end_node1 + 1, mhat));
+	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 2, end_node1 + 2, mhat));
+
+	// F
+	F.segment<3>(end_node1) += (k * (fixed_point - X.segment<3>(end_node1)));
+}
