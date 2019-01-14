@@ -1,19 +1,20 @@
 #pragma once
+#include <iostream>
 #include <Eigen/Sparse>
 
 #define MIN_Hz 30.0
 #define MAX_dT_nano 1.0 / MIN_Hz * 1000000.0
 
 // horizontal (+x) node count 
-#define ROW 2
+#define ROW 50
 
 // vertical (-z) node count
-#define COL 2
+#define COL 50
 
 // default spring length
-#define REST_LENGTH 0.2
+#define REST_LENGTH 0.1
 
-#define GRAVITY 100.0
+#define GRAVITY 10.0
 #define MASS 1.0 / (ROW*COL)
 #define STIFFNESS 10.0
 #define STIFFNESS_CONSTRAINT 10.0 * STIFFNESS
@@ -32,3 +33,6 @@ typedef Eigen::Matrix<double, 3, 3, 0, 3, 3> Matrix3;
 typedef Eigen::Matrix<double, 3, 1, 0, 3, 1> Vector3;
 typedef Eigen::Matrix<double, Eigen::Dynamic, 1> VectorX;
 typedef Eigen::SparseMatrix<double> MatrixX;
+
+using std::cout;
+using std::endl;

@@ -5,12 +5,10 @@
 #include <Windows.h>
 #include "defines.h"
 #include "textfile.h"
+#include "constraint.h"
 #include "mesh.h"
 #include "control.h"
 
-enum Integrator {
-	LocalGlobal, GradientDescent, NewtonsMethod, PMI, IEI, LastIndex
-};
 enum ControlNodeIndex {
 	one, two, control_node_count
 };
@@ -59,10 +57,13 @@ private:
 	Eigen::SimplicialLLT<MatrixX, Eigen::Upper> llt_solver_localglobal;
 	// =========================== //
 	// NON-ITERATIVE METHODS
-	// 4) pmi
-	void PMIUpdate(const VectorX &Xi);
-	// 5) iei
-	void IeiUpdate(const VectorX &Y, VectorX &X_output);
+	// 4) pmi, iei
+	void NoniterativeUpdate_FixedTimestep(const double Tk, const VectorX &Xi);
+	void PrefactorizeNoniterative(Integrator integrator);
+	MatrixX Mlhs_pmi, Mrhs_pmi, Mlhs_iei, Mrhs_iei;
+	bool pmi_first_loop, iei_first_loop;
+	Eigen::SimplicialLLT<MatrixX, Eigen::Upper> llt_solver_pmi, llt_solver_iei;
+	void NoniterativeUpdate_VaryingTimestep(const double Tk, const VectorX &Xi);
 	// =========================== //
 
 

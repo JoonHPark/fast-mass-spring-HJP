@@ -74,35 +74,87 @@ void Spring::Construct_DVector(const VectorX &Xi, VectorX &d) {
 }
 
 
-// PMI
-void Spring::ConstructPMI_Mlhs_F(const double dt, const double mass, const double damping, const VectorX &X, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, VectorX &F) {
-	// Khat
+//
+//
+//
+//
+//
+//
+// non-iterative integraion
+void Spring::ConstructNoniterative_Mlhs_F(const Integrator integrator, const double dt, const double mass, const double damping, const VectorX &X, MatrixX &Mlhs, VectorX &F) {
+	// integrator-dependent variable
+	double K = 0;
+
 	const Vector3 x21 = X.segment<3>(end_node2) - X.segment<3>(end_node1);
-	const double x21_norm = abs(x21.norm());
-	const double Khat = k * (x21_norm - r) / x21_norm;
+	const double x21_norm = sqrt(pow(x21(0), 2) + pow(x21(1), 2) + pow(x21(2), 2));
+
+	// Khat
+	const double Khat = k * (1 - r / x21_norm);
+	if (integrator == PMI) {
+		K = k * dt / 2.0;
+	}
+	else if (integrator == IEI) {
+		K = k * dt;
+	}
 
 	// Mlhs
-	const double element = Khat * dt / 2.0;
-	const double mhat = mass * 2.0 / dt + damping;
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 0, end_node1 + 0, mhat + element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 1, end_node1 + 1, mhat + element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 2, end_node1 + 2, mhat + element));
+	Mlhs.coeffRef(end_node1 + 0, end_node1 + 0) += K;
+	Mlhs.coeffRef(end_node1 + 1, end_node1 + 1) += K;
+	Mlhs.coeffRef(end_node1 + 2, end_node1 + 2) += K;
 
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 0, end_node2 + 0, -element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 1, end_node2 + 1, -element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 2, end_node2 + 2, -element));
+	Mlhs.coeffRef(end_node1 + 0, end_node2 + 0) += -K;
+	Mlhs.coeffRef(end_node1 + 1, end_node2 + 1) += -K;
+	Mlhs.coeffRef(end_node1 + 2, end_node2 + 2) += -K;
 
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node2 + 0, end_node1 + 0, -element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node2 + 1, end_node1 + 1, -element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node2 + 2, end_node1 + 2, -element));
+	Mlhs.coeffRef(end_node2 + 0, end_node1 + 0) += -K;
+	Mlhs.coeffRef(end_node2 + 1, end_node1 + 1) += -K;
+	Mlhs.coeffRef(end_node2 + 2, end_node1 + 2) += -K;
 
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node2 + 0, end_node2 + 0, mhat + element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node2 + 1, end_node2 + 1, mhat + element));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node2 + 2, end_node2 + 2, mhat + element));
+	Mlhs.coeffRef(end_node2 + 0, end_node2 + 0) += K;
+	Mlhs.coeffRef(end_node2 + 1, end_node2 + 1) += K;
+	Mlhs.coeffRef(end_node2 + 2, end_node2 + 2) += K;
+	
+	// F
+	const Vector3 force = Khat * x21;
+	F.segment<3>(end_node1) += force;
+	F.segment<3>(end_node2) -= force;
+}
+void Spring::PreconstructNoniterative_Mlhs(const Integrator integrator, const double dt, const double mass, const double damping, const VectorX &X, MatrixX &Mlhs) {
+	double K = 0;
 
+	if (integrator == PMI) {
+		K = k * dt / 2.0;
+	}
+	else if (integrator == IEI) {
+		K = k * dt;
+	}
+
+	// Mlhs
+	Mlhs.coeffRef(end_node1 + 0, end_node1 + 0) += K;
+	Mlhs.coeffRef(end_node1 + 1, end_node1 + 1) += K;
+	Mlhs.coeffRef(end_node1 + 2, end_node1 + 2) += K;
+
+	Mlhs.coeffRef(end_node1 + 0, end_node2 + 0) += -K;
+	Mlhs.coeffRef(end_node1 + 1, end_node2 + 1) += -K;
+	Mlhs.coeffRef(end_node1 + 2, end_node2 + 2) += -K;
+
+	Mlhs.coeffRef(end_node2 + 0, end_node1 + 0) += -K;
+	Mlhs.coeffRef(end_node2 + 1, end_node1 + 1) += -K;
+	Mlhs.coeffRef(end_node2 + 2, end_node1 + 2) += -K;
+
+	Mlhs.coeffRef(end_node2 + 0, end_node2 + 0) += K;
+	Mlhs.coeffRef(end_node2 + 1, end_node2 + 1) += K;
+	Mlhs.coeffRef(end_node2 + 2, end_node2 + 2) += K;
+}
+void Spring::ConstructNoniterative_F(const Integrator integrator, const double dt, const double mass, const double damping, const VectorX &X, VectorX &F) {
+	// Khat
+	const Vector3 x21 = X.segment<3>(end_node2) - X.segment<3>(end_node1);
+	const double x21_norm = sqrt(pow(x21(0), 2) + pow(x21(1), 2) + pow(x21(2), 2));
+	const double Khat = k * (1 - r / x21_norm);
 
 	// F
 	const Vector3 force = Khat * x21;
 	F.segment<3>(end_node1) += force;
 	F.segment<3>(end_node2) -= force;
 }
+

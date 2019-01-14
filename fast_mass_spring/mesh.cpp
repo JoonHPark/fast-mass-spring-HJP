@@ -66,15 +66,80 @@ void Mesh::ConstructJTriplets(std::vector<Eigen::Triplet<double, int>> &triplets
 	}
 }
 
-// PMI
-void Mesh::ConstructForPmi(const double Tk, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, std::vector<Eigen::Triplet<double, int>> &Mrhs_triplets, VectorX &F) {
-	// loop constraints, construct Mlhs, Mrhs, B
+
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+// non-iterative integration
+void Mesh::ConstructNoniterative(const Integrator integrator, const double Tk, MatrixX &Mlhs, MatrixX &Mrhs, VectorX &F) {
+	double mhat_rhs = 0;
+	if (integrator == PMI) {
+		mhat_rhs = mass / Tk * 2.0;
+	}
+	else if (integrator == IEI) {
+		mhat_rhs = mass / Tk;
+	}
+	// Mrhs
+	for (int i = 0; i < sys_dim; i++) {
+		Mrhs.coeffRef(i, i) += mhat_rhs;
+	}
+
+	// Mlhs
 	for (std::vector<Constraint*>::iterator c = constraints.begin(); c != constraints.end(); c++) {
-		(*c)->ConstructPMI_Mlhs_F(Tk, mass, damping, X, Mlhs_triplets, F);
-		(*c)->ConstructPMI_Mrhs(Tk, mass, Mrhs_triplets);
+		(*c)->ConstructNoniterative_Mlhs_F(integrator, Tk, mass, damping, X, Mlhs, F);
+	}
+
+	double mhat_lhs = mhat_rhs + damping;
+	for (int i = 0; i < sys_dim; i++) {
+		Mlhs.coeffRef(i, i) += mhat_lhs;
+	}
+}
+void Mesh::ConstructNoniterative_F(const Integrator integrator, const double Tk, VectorX &F) {
+	// F
+	for (std::vector<Constraint*>::iterator c = constraints.begin(); c != constraints.end(); c++) {
+		(*c)->ConstructNoniterative_F(integrator, Tk, mass, damping, X, F);
+	}
+}
+void Mesh::PreconstructNoniterative(const Integrator integrator, const double Tk, MatrixX &Mlhs, MatrixX &Mrhs) {
+	double mhat_rhs = 0;
+	if (integrator == PMI) {
+		mhat_rhs = mass / Tk * 2.0;
+	}
+	else if (integrator == IEI) {
+		mhat_rhs = mass / Tk;
+	}
+	// Mrhs
+	for (int i = 0; i < sys_dim; i++) {
+		Mrhs.coeffRef(i, i) += mhat_rhs;
+	}
+
+	// Mlhs
+	for (std::vector<Constraint*>::iterator c = constraints.begin(); c != constraints.end(); c++) {
+		(*c)->PreconstructNoniterative_Mlhs(integrator, Tk, mass, damping, X, Mlhs);
+	}
+
+	double mhat_lhs = mhat_rhs + damping;
+	for (int i = 0; i < sys_dim; i++) {
+		Mlhs.coeffRef(i, i) += mhat_lhs;
 	}
 }
 
+//
+//
+//
+//
+//
+//
+//
+//
+//
 void Mesh::ConstructDVector(const VectorX &Xi, VectorX &d) {
 	Spring *spring;
 	Vector3 x1, x2, d12;
@@ -117,7 +182,7 @@ void Mesh::InitNodesAndSprings() {
 	Vel.setZero();
 	X_default.setZero();
 
-	double length_initial = REST_LENGTH * 1.0;
+	double length_initial = REST_LENGTH * 2.0;
 	double y_initial = 0.0;
 
 	// init nodes

@@ -43,11 +43,19 @@ public:
 	void ConstructJTriplets(std::vector<Eigen::Triplet<double, int>> &triplets);
 	// d vector
 	void ConstructDVector(const VectorX &Xi, VectorX &d);
+	//
+	//
 	// ------------------- //
-	// * PMI
-	// lhs M matrix
-	void ConstructForPmi(const double Tk, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, std::vector<Eigen::Triplet<double, int>> &Mrhs_triplets, VectorX &F);
+	// Non-iterative methods
+	// varying dt
+	void ConstructNoniterative(const Integrator integrator, const double Tk, MatrixX &Mlhs, MatrixX &Mrhs, VectorX &F);
+	// fixed dt
+	void ConstructNoniterative_F(const Integrator integrator, const double Tk, VectorX &F);
+	void PreconstructNoniterative(const Integrator integrator, const double Tk, MatrixX &Mlhs, MatrixX &Mrhs);
 	// ------------------- //
+
+
+
 
 	// state update (setter)
 	void UpdateState(const VectorX &X_new, const double h);

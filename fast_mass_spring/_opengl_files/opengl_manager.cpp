@@ -211,7 +211,7 @@ void opengl::OpenglManager::LayoutObjects(GLuint &shaderProgram, const bool is_d
 
 	// Render Axes
 	if (!is_depthmapping) {
-		//LayoutAxes(shaderProgram, is_depthmapping);
+		LayoutAxes(shaderProgram, is_depthmapping);
 	}
 
 

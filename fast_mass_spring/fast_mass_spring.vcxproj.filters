@@ -131,14 +131,14 @@
     <ClInclude Include="spring.h">
       <Filter>Header Files\mesh\constraint\spring</Filter>
     </ClInclude>
-    <ClInclude Include="spring_fixed.h">
-      <Filter>Header Files\mesh\constraint\spring_fixed</Filter>
-    </ClInclude>
     <ClInclude Include="control.h">
       <Filter>Header Files\mesh\control</Filter>
     </ClInclude>
     <ClInclude Include="defines.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="spring_fixed.h">
+      <Filter>Header Files\mesh\constraint\spring_fixed</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

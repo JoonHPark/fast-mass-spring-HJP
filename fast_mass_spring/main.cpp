@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 	// init some values
 	g_toggle_integrator = false;
 	g_process_mouse = false;
-	g_do_control = true;
+	g_do_control = false;
 	g_mesh_fill = true;
 	g_reset = false;
 	g_gain = P;

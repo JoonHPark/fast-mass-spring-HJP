@@ -31,15 +31,48 @@ void SpringFixed::Construct_DVector(const VectorX &Xi, VectorX &d) {
 	d.segment<3>(3 * constraint_index) = fixed_point;
 }
 
+//
+//
+//
+//
+//
+//
+//
+// non-iterative integration
+void SpringFixed::ConstructNoniterative_Mlhs_F(const Integrator integrator, const double dt, const double mass, const double damping, const VectorX &X, MatrixX &Mlhs, VectorX &F) {
+	// integrator-dependent variable
+	double K = 0;
 
-// PMI
-void SpringFixed::ConstructPMI_Mlhs_F(const double dt, const double mass, const double damping, const VectorX &X, std::vector<Eigen::Triplet<double, int>> &Mlhs_triplets, VectorX &F) {
+	if (integrator == PMI) {
+		K = k * dt / 2.0;
+	}
+	else if (integrator == IEI) {
+		K = k * dt;
+	}
 	// Mlhs
-	double mhat = mass * 2.0 / dt + damping + k * dt / 2.0;
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 0, end_node1 + 0, mhat));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 1, end_node1 + 1, mhat));
-	Mlhs_triplets.push_back(Eigen::Triplet<double, int>(end_node1 + 2, end_node1 + 2, mhat));
+	Mlhs.coeffRef(end_node1 + 0, end_node1 + 0) += K;
+	Mlhs.coeffRef(end_node1 + 1, end_node1 + 1) += K;
+	Mlhs.coeffRef(end_node1 + 2, end_node1 + 2) += K;
 
+	// F
+	F.segment<3>(end_node1) += (k * (fixed_point - X.segment<3>(end_node1)));
+}
+void SpringFixed::PreconstructNoniterative_Mlhs(const Integrator integrator, const double dt, const double mass, const double damping, const VectorX &X, MatrixX &Mlhs) {
+	// integrator-dependent variable
+	double K = 0;
+
+	if (integrator == PMI) {
+		K = k * dt / 2.0;
+	}
+	else if (integrator == IEI) {
+		K = k * dt;
+	}
+	// Mlhs
+	Mlhs.coeffRef(end_node1 + 0, end_node1 + 0) += K;
+	Mlhs.coeffRef(end_node1 + 1, end_node1 + 1) += K;
+	Mlhs.coeffRef(end_node1 + 2, end_node1 + 2) += K;
+}
+void SpringFixed::ConstructNoniterative_F(const Integrator integrator, const double dt, const double mass, const double damping, const VectorX &X, VectorX &F) {
 	// F
 	F.segment<3>(end_node1) += (k * (fixed_point - X.segment<3>(end_node1)));
 }

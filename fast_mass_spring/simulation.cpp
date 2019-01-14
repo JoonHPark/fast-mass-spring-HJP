@@ -19,6 +19,9 @@ extern Integrator g_integrator;
 
 Simulation::Simulation() : I_3x3(Eigen::Matrix3d::Identity()) {
 	local_global_first_loop = true;
+	pmi_first_loop = true;
+	iei_first_loop = true;
+
 	ctrl_sec_elpased = 0.0;
 	total_sec_elapsed = 0.0;
 	frame_count = 0;
@@ -42,6 +45,7 @@ Simulation::Simulation() : I_3x3(Eigen::Matrix3d::Identity()) {
 		i_triplets.push_back(Eigen::Triplet<double, int>(i, i, 1));
 	}
 	I_3m3m.setFromTriplets(i_triplets.begin(), i_triplets.end());
+
 
 	// for node control
 	controller = new Control(control_node_count);
@@ -150,16 +154,15 @@ void Simulation::UpdateSimulation() {
 		// non-iterative
 		switch (g_integrator) {
 		case Integrator::PMI:
-			PMIUpdate(g_mesh->X);
-			break;
 		case Integrator::IEI:
+			NoniterativeUpdate_FixedTimestep(h, g_mesh->X);
 			break;
 		}
 	}
 
 	// auxiliary for PID control
 	if (g_do_control) {
-		if (ctrl_sec_elpased > 0.5) {
+		if (ctrl_sec_elpased > 1.f) {
 			ctrl_sec_elpased = 0.0;
 			controller->ToggleStageIndex(one);
 			controller->ToggleStageIndex(two);
@@ -194,7 +197,6 @@ void Simulation::GradientDescentUpdate(const VectorX &Y, VectorX &X_output) {
 		// *** update ******* //
 		Xi = Xi - STEP_SIZE * gradient;
 	} // for ends
-
 	X_output = Xi;
 }
 
@@ -286,24 +288,99 @@ void Simulation::LocalGlobalUpdate(const VectorX &Y, VectorX &X_output) {
 	X_output = Xi;
 }
 /***************************
-4) PMI
+4) PMI, IEI
 ****************************/
-void Simulation::PMIUpdate(const VectorX &Xi) {
+void Simulation::NoniterativeUpdate_FixedTimestep(const double Tk, const VectorX &Xi) {
+	// 1. Precompute & Prefactorize ========================= //
+	if (g_integrator == PMI && pmi_first_loop) {
+		PrefactorizeNoniterative(PMI);
+		pmi_first_loop = false;
+	}
+	else if (g_integrator == IEI && iei_first_loop) {
+		PrefactorizeNoniterative(IEI);
+		iei_first_loop = false;
+	}
+
+	VectorX F(g_mesh->sys_dim);
+	F.setZero();
+
+	// construct F
+	g_mesh->ConstructNoniterative_F(g_integrator, h, F);
+
+	// gravity
+	F += g_gravity_force;
+
+	// controller
+	if (0) {
+		static const PID pid_gain = PID(pid_P, pid_I, pid_D);
+		Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, Tk, Xi.segment<3>(g_fixed_index_1));
+		Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, Tk, Xi.segment<3>(g_fixed_index_2));
+		F.segment<3>(g_fixed_index_1) = f_ctrl_1;
+		F.segment<3>(g_fixed_index_2) = f_ctrl_2;
+	}
+	
+	// update
+	VectorX Vel_next, X_next;
+	if (g_integrator == PMI) {
+		// solve
+		VectorX rhs = Mrhs_pmi* g_mesh->Vel + F;
+		VectorX Vhat = llt_solver_pmi.solve(rhs);
+
+		// v_{k+1}
+		Vel_next = 2.0*Vhat - g_mesh->Vel;
+		// x_{k+1}
+		X_next = g_mesh->X + Vhat * Tk;
+	}
+	else if (g_integrator == IEI) {
+		// solve
+		VectorX rhs = Mrhs_iei * g_mesh->Vel + F;
+		// v_{k+1}
+		Vel_next = llt_solver_iei.solve(rhs);
+		// x_{k+1}
+		X_next = g_mesh->X + Vel_next * Tk;
+	}
+
+	// update states here
+	g_mesh->X = X_next;
+	g_mesh->Vel = Vel_next;
+}
+void Simulation::PrefactorizeNoniterative(Integrator integrator) {
+	printf("prefactorizing for ");
+	if (integrator == PMI) {
+		printf("PMI...");
+		Mlhs_pmi.resize(g_mesh->sys_dim, g_mesh->sys_dim);
+		Mrhs_pmi.resize(g_mesh->sys_dim, g_mesh->sys_dim);
+		Mlhs_pmi.setZero();
+		Mrhs_pmi.setZero();
+		// construction
+		g_mesh->PreconstructNoniterative(integrator, h, Mlhs_pmi, Mrhs_pmi);
+		// prefactorize: Cholesky
+		FactorizeDirectSolverLLT(Mlhs_pmi, llt_solver_pmi);
+	}
+	else if (integrator == IEI) {
+		printf("IEI...");
+		Mlhs_iei.resize(g_mesh->sys_dim, g_mesh->sys_dim);
+		Mrhs_iei.resize(g_mesh->sys_dim, g_mesh->sys_dim);
+		Mlhs_iei.setZero();
+		Mrhs_iei.setZero();
+		// construction
+		g_mesh->PreconstructNoniterative(integrator, h, Mlhs_iei, Mrhs_iei);
+		// prefactorize: Cholesky
+		FactorizeDirectSolverLLT(Mlhs_iei, llt_solver_iei);
+	}
+	printf(" done!\n");
+}
+void Simulation::NoniterativeUpdate_VaryingTimestep(const double Tk, const VectorX &Xi) {
 	//auto t0 = std::chrono::high_resolution_clock::now();
 	MatrixX Mlhs(g_mesh->sys_dim, g_mesh->sys_dim);
 	MatrixX Mrhs(g_mesh->sys_dim, g_mesh->sys_dim);
 	VectorX F(g_mesh->sys_dim);
+	Mrhs.setZero();
+	Mlhs.setZero();
 	F.setZero();
 
-	// * 4 and * 2 = just count how many .push_back() is called per constraint
-	std::vector<Eigen::Triplet<double, int>> Mlhs_triplets, Mrhs_triplets;
-	Mlhs_triplets.reserve(g_mesh->constraint_count * 12);
-	Mrhs_triplets.reserve(g_mesh->constraint_count * 6);
-
 	// construction occurs here
-	g_mesh->ConstructForPmi(h, Mlhs_triplets, Mrhs_triplets, F);
-	Mlhs.setFromTriplets(Mlhs_triplets.begin(), Mlhs_triplets.end());
-	Mrhs.setFromTriplets(Mrhs_triplets.begin(), Mrhs_triplets.end());
+	g_mesh->ConstructNoniterative(g_integrator, Tk, Mlhs, Mrhs, F);
 	//auto t1 = std::chrono::high_resolution_clock::now();
 
 	// gravity
@@ -313,8 +390,8 @@ void Simulation::PMIUpdate(const VectorX &Xi) {
 	// controller
 	if (0) {
 		static const PID pid_gain = PID(pid_P, pid_I, pid_D);
-		Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, g_dt, Xi.segment<3>(g_fixed_index_1));
-		Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, g_dt, Xi.segment<3>(g_fixed_index_2));
+		Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, Tk, Xi.segment<3>(g_fixed_index_1));
+		Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, Tk, Xi.segment<3>(g_fixed_index_2));
 		F.segment<3>(g_fixed_index_1) = f_ctrl_1;
 		F.segment<3>(g_fixed_index_2) = f_ctrl_2;
 	}
@@ -326,9 +403,6 @@ void Simulation::PMIUpdate(const VectorX &Xi) {
 	Eigen::SimplicialLDLT<MatrixX, Eigen::Upper> ldlt_solver;
 	FactorizeDirectSolverLDLT(Mlhs, ldlt_solver);
 
-	cout << "------------- Mlhs" << endl << Mlhs << endl;
-	cout << "------------- Mrhs" << endl << Mrhs << endl;
-	cout << "------------- dE" << endl << F << endl << endl;
 
 	// construct (Mrhs*Vel + F)
 	VectorX rhs = Mrhs * g_mesh->Vel + F;
@@ -339,7 +413,7 @@ void Simulation::PMIUpdate(const VectorX &Xi) {
 	VectorX Vel_next = 2.0*Vhat - g_mesh->Vel;
 
 	// x_{k+1}
-	VectorX X_next = g_mesh->X + Vhat * h;
+	VectorX X_next = g_mesh->X + Vhat * Tk;
 
 	// update states here
 	g_mesh->X = X_next;
@@ -358,11 +432,10 @@ void Simulation::PMIUpdate(const VectorX &Xi) {
 	*/
 }
 
-/***************************
-5) IEI
-****************************/
-void Simulation::IeiUpdate(const VectorX &Y, VectorX &X_output) {
-}
+
+
+
+
 
 
 // =================================== //
@@ -419,7 +492,7 @@ void Simulation::PrefactorizeLocalGlobal() {
 
 
 void Simulation::InitControlCommands() {
-	double dx = ROW * REST_LENGTH * 0.25;
+	double dx = ROW * REST_LENGTH * 0.5;
 
 	Vector3 initial_pos = g_mesh->X_default.segment<3>(g_fixed_index_1);
 	controller->AddCommand(one, initial_pos + Vector3(0, dx, 0));
@@ -434,7 +507,6 @@ void Simulation::InitControlCommands() {
 	controller->AddCommand(two, initial_pos);
 }
 void Simulation::Reset() {
-	local_global_first_loop = true;
 	ctrl_sec_elpased = 0.0;
 	controller->Reset();
 	g_mesh->Reset();
@@ -442,7 +514,7 @@ void Simulation::Reset() {
 }
 void Simulation::ToggleIntegrator() {
 	if ((int)g_integrator == (int)LastIndex - 1) {
-		g_integrator = (Integrator)0;
+		g_integrator = (Integrator) 0;
 	}
 	else {
 		g_integrator = (Integrator)((int)g_integrator + 1);
