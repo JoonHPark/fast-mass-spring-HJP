@@ -138,13 +138,13 @@ void Simulation::UpdateSimulation() {
 		// === 2. State update ====================================== //
 		switch (g_integrator) {
 		case Integrator::GradientDescent:
-			GradientDescentUpdate(Y, X_updated);
+			GradientDescentUpdate(h, Y, X_updated);
 			break;
 		case Integrator::NewtonsMethod:
-			NewtonsMethodUpdate(Y, X_updated);
+			NewtonsMethodUpdate(h, Y, X_updated);
 			break;
 		case Integrator::LocalGlobal:
-			LocalGlobalUpdate(Y, X_updated);
+			LocalGlobalUpdate(h, Y, X_updated);
 			break;
 		}
 		// === 3. Velocity update =================================== //
@@ -173,7 +173,7 @@ void Simulation::UpdateSimulation() {
 /***************************
 1) gradient descent
 ****************************/
-void Simulation::GradientDescentUpdate(const VectorX &Y, VectorX &X_output) {
+void Simulation::GradientDescentUpdate(const double Tk, const VectorX &Y, VectorX &X_output) {
 	// initial condition
 	VectorX Xi = Y;
 
@@ -183,13 +183,13 @@ void Simulation::GradientDescentUpdate(const VectorX &Y, VectorX &X_output) {
 		gradient.setZero();
 
 		// *** gradient ***** //
-		g_mesh->ComputeGradient(Xi, Y, h, gradient);
+		g_mesh->ComputeGradient(Xi, Y, Tk, gradient);
 
 		// *** controller ***** //
 		if (g_do_control) {
 			static const PID pid_gain = PID(pid_P, pid_I, pid_D);
-			Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, h, Xi.segment<3>(g_fixed_index_1));
-			Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, h, Xi.segment<3>(g_fixed_index_2));
+			Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, Tk, Xi.segment<3>(g_fixed_index_1));
+			Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, Tk, Xi.segment<3>(g_fixed_index_2));
 			gradient.segment<3>(g_fixed_index_1) = f_ctrl_1;
 			gradient.segment<3>(g_fixed_index_2) = f_ctrl_2;
 		}
@@ -203,7 +203,7 @@ void Simulation::GradientDescentUpdate(const VectorX &Y, VectorX &X_output) {
 /***************************
 2) Newton's method
 ****************************/
-void Simulation::NewtonsMethodUpdate(const VectorX &Y, VectorX &X_output) {
+void Simulation::NewtonsMethodUpdate(const double Tk, const VectorX &Y, VectorX &X_output) {
 	// initial condition
 	VectorX Xi = Y;
 
@@ -215,16 +215,16 @@ void Simulation::NewtonsMethodUpdate(const VectorX &Y, VectorX &X_output) {
 		hessian.setZero();
 
 		// *** gradient ***** //
-		g_mesh->ComputeGradient(Xi, Y, h, gradient);
+		g_mesh->ComputeGradient(Xi, Y, Tk, gradient);
 
 		// *** hessian ***** //
-		g_mesh->ComputeHessian(Xi, h, hessian);
+		g_mesh->ComputeHessian(Xi, Tk, hessian);
 
 		// *** controller ***** //
 		if (g_do_control) {
 			static const PID pid_gain = PID(pid_P, pid_I, pid_D);
-			Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, h, Xi.segment<3>(g_fixed_index_1));
-			Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, h, Xi.segment<3>(g_fixed_index_2));
+			Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, Tk, Xi.segment<3>(g_fixed_index_1));
+			Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, Tk, Xi.segment<3>(g_fixed_index_2));
 			gradient.segment<3>(g_fixed_index_1) = f_ctrl_1;
 			gradient.segment<3>(g_fixed_index_2) = f_ctrl_2;
 		}
@@ -244,7 +244,7 @@ void Simulation::NewtonsMethodUpdate(const VectorX &Y, VectorX &X_output) {
 /***************************
 3) block coordinate descent
 ****************************/
-void Simulation::LocalGlobalUpdate(const VectorX &Y, VectorX &X_output) {
+void Simulation::LocalGlobalUpdate(const double Tk, const VectorX &Y, VectorX &X_output) {
 	// 1. Precompute & Prefactorize ========================= //
 	if (local_global_first_loop) {
 		PrefactorizeLocalGlobal();
@@ -272,14 +272,14 @@ void Simulation::LocalGlobalUpdate(const VectorX &Y, VectorX &X_output) {
 		if (g_do_control) {
 			// rough
 			static const PID pid_gain = PID(pid_P * 0.6, pid_I, pid_D);
-			Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, h, Xi.segment<3>(g_fixed_index_1));
-			Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, h, Xi.segment<3>(g_fixed_index_2));
-			dE.segment<3>(g_fixed_index_1) = f_ctrl_1 / (h*h);
-			dE.segment<3>(g_fixed_index_2) = f_ctrl_2 / (h*h);
+			Vector3 f_ctrl_1 = controller->ComputeControlForce(one, pid_gain, Tk, Xi.segment<3>(g_fixed_index_1));
+			Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, Tk, Xi.segment<3>(g_fixed_index_2));
+			dE.segment<3>(g_fixed_index_1) = f_ctrl_1 / (Tk*Tk);
+			dE.segment<3>(g_fixed_index_2) = f_ctrl_2 / (Tk*Tk);
 		}
 
 		// X = inv(A)*b -> X_i+1 = (M + hhL)^-1 * [My + h*h*(Jd + f_ext)]
-		VectorX b = g_mesh->M * Y + h * h * (J * d + dE);
+		VectorX b = g_mesh->M * Y + Tk * Tk * (J * d + dE);
 
 		// *** update *** //
 		Xi = llt_solver_localglobal.solve(b);
@@ -305,7 +305,7 @@ void Simulation::NoniterativeUpdate_FixedTimestep(const double Tk, const VectorX
 	F.setZero();
 
 	// construct F
-	g_mesh->ConstructNoniterative_F(g_integrator, h, F);
+	g_mesh->ConstructNoniterative_F(g_integrator, Tk, F);
 
 	// gravity
 	F += g_gravity_force;
@@ -317,6 +317,10 @@ void Simulation::NoniterativeUpdate_FixedTimestep(const double Tk, const VectorX
 		Vector3 f_ctrl_2 = controller->ComputeControlForce(two, pid_gain, Tk, Xi.segment<3>(g_fixed_index_2));
 		F.segment<3>(g_fixed_index_1) = f_ctrl_1;
 		F.segment<3>(g_fixed_index_2) = f_ctrl_2;
+	}
+	else {
+		F.segment<3>(g_fixed_index_1) *= 0;
+		F.segment<3>(g_fixed_index_2) *= 0;
 	}
 	
 	// update

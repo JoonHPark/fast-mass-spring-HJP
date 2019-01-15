@@ -44,12 +44,12 @@ private:
 	// =========================== //
 	// MAIN SIMULATION FUNCTIONS
 	// 1) gradient descent
-	void GradientDescentUpdate(const VectorX &Y, VectorX &X_output);
+	void GradientDescentUpdate(const double Tk, const VectorX &Y, VectorX &X_output);
 	// 2) newton's method
-	void NewtonsMethodUpdate(const VectorX &Y, VectorX &X_output);
+	void NewtonsMethodUpdate(const double Tk, const VectorX &Y, VectorX &X_output);
 	void FactorizeDirectSolverLDLT(const MatrixX& A, Eigen::SimplicialLDLT<MatrixX, Eigen::Upper>& ldlt_solver);
 	// 3) block coordinate descent
-	void LocalGlobalUpdate(const VectorX &Y, VectorX &X_output);
+	void LocalGlobalUpdate(const double Tk, const VectorX &Y, VectorX &X_output);
 	void FactorizeDirectSolverLLT(const MatrixX& MhhL, Eigen::SimplicialLLT<MatrixX, Eigen::Upper> &llt_solver);
 	void PrefactorizeLocalGlobal();
 	MatrixX M_hhL, L, J;

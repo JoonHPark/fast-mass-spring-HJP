@@ -65,7 +65,14 @@ void Mesh::ConstructJTriplets(std::vector<Eigen::Triplet<double, int>> &triplets
 		(*c)->Construct_J(triplets);
 	}
 }
-
+void Mesh::ConstructDVector(const VectorX &Xi, VectorX &d) {
+	Spring *spring;
+	Vector3 x1, x2, d12;
+	int spring_index = 0;
+	for (std::vector<Constraint*>::iterator c = constraints.begin(); c != constraints.end(); c++) {
+		(*c)->Construct_DVector(Xi, d);
+	}
+}
 
 
 //
@@ -140,14 +147,6 @@ void Mesh::PreconstructNoniterative(const Integrator integrator, const double Tk
 //
 //
 //
-void Mesh::ConstructDVector(const VectorX &Xi, VectorX &d) {
-	Spring *spring;
-	Vector3 x1, x2, d12;
-	int spring_index = 0;
-	for (std::vector<Constraint*>::iterator c = constraints.begin(); c != constraints.end(); c++) {
-		(*c)->Construct_DVector(Xi, d);
-	}
-}
 void Mesh::Reset() {
 	constraints.clear();
 	InitNodesAndSprings();
@@ -182,7 +181,7 @@ void Mesh::InitNodesAndSprings() {
 	Vel.setZero();
 	X_default.setZero();
 
-	double length_initial = REST_LENGTH * 2.0;
+	double length_initial = REST_LENGTH * 1.2;
 	double y_initial = 0.0;
 
 	// init nodes

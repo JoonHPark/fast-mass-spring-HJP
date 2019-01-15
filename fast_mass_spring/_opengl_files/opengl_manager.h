@@ -16,7 +16,7 @@
 #include "_classes/cache_manager.h"
 
 // Defines
-#define DISP_4k
+//#define DISP_4k
 #ifdef DISP_4k
 // If 4K display
 #define WINDOW_WIDTH 2560
